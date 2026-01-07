@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  telegramId   BigInt   @unique
+  username     String?
+  firstName    String?
+  languageCode String?
+  phoneNumber  String?
+  createdAt    DateTime @default(now())
+  
+  leads        Lead[]
+  messages     Message[]
+}
+
+model Lead {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  status          String   @default("NEW") // NEW, QUALIFIED, WARM, CLIENT, ARCHIVE
+  interest        String?
+  estimatedBudget Int?
+  followUpStage   Int      @default(0) // 0=None, 1=Day1, 2=Day3, 3=Day7, 4=Day21
+  isFollowUpEnabled Boolean @default(true)
+  nextFollowUp    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  role      String   // user, assistant, system
+  content   String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+}
