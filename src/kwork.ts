@@ -61,48 +61,57 @@ bot.on("message:contact", async (ctx) => {
 });
 
 // Basic message handler
+// Basic message handler
 bot.on("message:text", async (ctx) => {
-    // Show typing status
-    await ctx.replyWithChatAction("typing");
+    try {
+        // Show typing status
+        await ctx.replyWithChatAction("typing");
 
-    // Fetch recent messages for context (in a real app, limit to last 5-10)
-    const history = await prisma.message.findMany({
-        where: { userId: ctx.from.id },
-        orderBy: { createdAt: 'desc' },
-        take: 6,
-    });
-
-    const formattedHistory = history.reverse().map((msg: { role: string; content: string; }) => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content
-    }));
-
-    // Save user message
-    await prisma.message.create({
-        data: {
-            userId: (await prisma.user.findUnique({ where: { telegramId: ctx.from.id } }))!.id,
-            role: "user",
-            content: ctx.message.text
+        // Ensure user exists (in case middleware failed)
+        const user = await prisma.user.findUnique({ where: { telegramId: ctx.from.id } });
+        if (!user) {
+            await ctx.reply("⚠️ Xatolik: Foydalanuvchi bazada topilmadi. Qayta /start bosing.");
+            return;
         }
-    });
 
-    // Get AI response
-    const aiText = await getAIResponse(ctx.message.text, formattedHistory);
+        // Fetch recent messages for context
+        const history = await prisma.message.findMany({
+            where: { userId: ctx.from.id },
+            orderBy: { createdAt: 'desc' },
+            take: 6,
+        });
 
-    // Save AI response
-    await prisma.message.create({
-        data: {
-            userId: (await prisma.user.findUnique({ where: { telegramId: ctx.from.id } }))!.id,
-            role: "assistant",
-            content: aiText
-        }
-    });
+        const formattedHistory = history.reverse().map((msg: { role: string; content: string; }) => ({
+            role: msg.role as "user" | "assistant",
+            content: msg.content
+        }));
 
-    // Update Lead status if not set
-    // (Simplistic logic: if chatting, mark as QUALIFIED/WARM)
-    // In production, we'd use AI function calling to set status explicitly.
+        // Save user message
+        await prisma.message.create({
+            data: {
+                userId: user.id,
+                role: "user",
+                content: ctx.message.text
+            }
+        });
 
-    await ctx.reply(aiText);
+        // Get AI response
+        const aiText = await getAIResponse(ctx.message.text, formattedHistory);
+
+        // Save AI response
+        await prisma.message.create({
+            data: {
+                userId: user.id,
+                role: "assistant",
+                content: aiText
+            }
+        });
+
+        await ctx.reply(aiText);
+    } catch (error) {
+        console.error("Message handler error:", error);
+        await ctx.reply(`⚠️ Tizimda xatolik yuz berdi.\nSababi: ${(error as Error).message}\n\nIltimos, admin bilan bog'laning.`);
+    }
 });
 
 bot.catch((err) => {
