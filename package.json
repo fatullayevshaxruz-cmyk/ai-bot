@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/kwork.js",
     "dev": "ts-node src/kwork.ts",
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && prisma db push && tsc",
     "postinstall": "npm run build",
     "db:push": "prisma db push"
   },
