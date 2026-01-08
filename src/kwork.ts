@@ -1,5 +1,6 @@
 import { Bot, session } from "grammy";
 import dotenv from "dotenv";
+import express from "express";
 import { MyContext, SessionData } from "./types/context";
 import { prisma } from "./db";
 import { getAIResponse } from "./services/ai.service";
@@ -112,4 +113,17 @@ import { setupCronJobs } from "./services/cron.service";
 
 console.log("Bot is starting...");
 setupCronJobs(bot);
+
+const app = express();
+app.use(express.json());
+
+app.get("/", (req, res) => {
+    res.send("Bot is running!");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+
 bot.start();
